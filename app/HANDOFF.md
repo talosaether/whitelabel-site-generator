@@ -13,7 +13,8 @@ entries to a few lines. Delete entries once they are no longer useful.
 | Edits | anything | `app/` and `frontend/` — copy, the `SITE` block, services, palette, logo |
 | Cannot write | — | `compose*.yaml`, `Dockerfile`, `.github/`, `tests/`, `scripts/`, the docs |
 | Ships by | pushing to `main`, or a PR | a PR that auto-merges when `check` is green |
-| GitHub token | fine-grained, this repo, no admin | fine-grained, this repo, contents + pull requests only |
+| GitHub token | fine-grained, this repo, no admin | fine-grained, this repo: contents, pull requests, issues |
+| Host account | `root` | unprivileged: no sudo, no docker group; ACLs on `app/`, `frontend/`, `.git/` (ADR-0013) |
 
 ## How Hermes ships a change
 

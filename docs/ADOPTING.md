@@ -81,7 +81,8 @@ gets shorter when production is not the only machine. On it:
   `.hermes/` stays root-owned and read-only to the assistant, so it cannot rewrite its own
   instructions. The assistant's rules say the same thing the ACLs enforce; keep both in
   step when the boundary moves.
-- The `hermes` account is an ordinary unprivileged user with no sudo. It has its own git
+- The `hermes` account is an ordinary unprivileged user with no sudo (ADR-0013 has the
+  commands). It has its own git
   identity, `safe.directory` for the tree, and `gh auth login` with its own token. Its
   agent configuration points `skills.external_dirs` at `/srv/<name>/.hermes/skills` and
   enables the Telegram platform; the skills in the tree are the whole of what it knows

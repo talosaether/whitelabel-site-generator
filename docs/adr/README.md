@@ -18,6 +18,7 @@ project with the same architecture and carried over with the reasoning intact.
 | [0010](0010-two-hosts.md) | A development host serves the working tree; production serves `main` |
 | [0011](0011-private-repository.md) | The repository is private; production borrows the deploy job's token |
 | [0012](0012-photos.md) | Photo originals tracked beside the app; only derivatives served |
+| [0013](0013-owner-assistant-account.md) | The owner's assistant is an unprivileged account; the ACLs are the boundary |
 
 Format: context, decision, consequences. Keep them short; if one needs reversing, add a
 new record that supersedes it rather than rewriting history.

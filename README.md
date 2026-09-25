@@ -139,6 +139,7 @@ Short records of why the non-obvious choices were made, in [docs/adr](docs/adr):
 | [0010](docs/adr/0010-two-hosts.md) | A development host serves the working tree; production serves `main` |
 | [0011](docs/adr/0011-private-repository.md) | The repository is private; the deploy job's token is the only credential production ever sees |
 | [0012](docs/adr/0012-photos.md) | Photo originals are tracked beside the app; only generated derivatives are served |
+| [0013](docs/adr/0013-owner-assistant-account.md) | The owner's assistant runs as an unprivileged account; the ACLs are the boundary |
 
 ## Conventions
 
