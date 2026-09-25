@@ -1,0 +1,15 @@
+<section class="contact-layout section-space" aria-label="Contact details">
+  <div class="contact-card">
+    <span class="eyebrow">Direct</span><h2>Let’s start with a conversation.</h2>
+    {% if site.phone or site.email %}
+    <div class="actions">
+      {% if site.phone %}<a class="button-link" href="tel:{{ site.phone }}" hx-boost="false">Call {{ site.phone_label }}</a><a class="button-link secondary" href="sms:{{ site.phone }}" hx-boost="false">Text {{ site.phone_label }}</a>{% endif %}
+      {% if site.email %}<a class="button-link{% if site.phone %} secondary{% endif %}" href="mailto:{{ site.email }}" hx-boost="false">Email {{ site.email }}</a>{% endif %}
+    </div>
+    {% else %}
+    <p class="placeholder">No contact details are set yet. Fill in <code>phone</code> or <code>email</code> in the <code>SITE</code> block of <code>app/main.py</code> and the buttons appear here, on the home page and in the footer.</p>
+    {% endif %}
+    <dl><dt>Area</dt><dd>{{ site.area }}.</dd><dt>Hours</dt><dd>{{ site.hours }}.</dd></dl>
+  </div>
+  <div class="contact-checklist"><h2>A few details help.</h2><p>When you reach out, please include:</p><ul><li>Your location</li><li>A short description of what you need</li><li>Your preferred timing</li></ul><p>We follow up within a working day. There is no online form to fill out.</p></div>
+</section>

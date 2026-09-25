@@ -1,0 +1,17 @@
+# The development host's Caddyfile, mounted by compose.dev.yaml in place of Caddyfile.
+# Identical to production's site block, plus a noindex header, and no www redirect:
+# there is no www.dev.* record and no reason for one.
+{$SITE_ADDRESS:dev.example.com} {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		X-Robots-Tag "noindex, nofollow, noarchive"
+		-Server
+	}
+	reverse_proxy app:8000 {
+		lb_try_duration 15s
+		lb_try_interval 250ms
+	}
+}

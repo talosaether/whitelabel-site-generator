@@ -1,0 +1,145 @@
+/* Palette. Branding a new instance starts here: --brand is the one colour the chrome
+   uses for buttons and focus, --accent is reserved for the current-page underline and
+   the focus ring on brand-coloured controls. Everything else is warm neutral. */
+:root {
+  --bg: #f6f5f2;
+  --surface: #fffefb;
+  --tint: #ecebe5;
+  --brand-soft: #e4ecef;
+  --ink: #1c2226;
+  --muted: #5d666b;
+  --eyebrow: #2f5f70;
+  --line: #dedcd5;
+  --line-strong: #c7c4bb;
+  --brand: #1f4e5f;
+  --brand-hover: #163b48;
+  --accent: #e9b949;
+}
+:root { font-family: system-ui, sans-serif; color: var(--ink); background: var(--bg); line-height: 1.65; }
+* { box-sizing: border-box; }
+img { max-width: 100%; }
+body { margin: 0; }
+a { color: inherit; text-underline-offset: .25em; }
+code { font-size: .92em; background: var(--tint); padding: .1em .35em; border-radius: .3em; }
+.site-header, main, .site-footer { max-width: 1200px; margin: auto; padding: 1.5rem; }
+.site-header { border-bottom: 1px solid var(--line); }
+.brand { display: inline-flex; flex-direction: row; align-items: center; gap: .7rem; font-weight: 800; text-decoration: none; line-height: 1.2; letter-spacing: -.01em; }
+.brand-mark { width: 52px; height: auto; display: block; }
+.brand-text { display: inline-flex; flex-direction: column; }
+.brand-text > span:first-child { font-size: 1.45rem; }
+.brand-detail { font-size: clamp(.7rem, 2.4vw, .78rem); font-weight: 550; letter-spacing: .02em; margin-top: .2rem; color: var(--muted); }
+/* Main navigation: a few plain links, no container. Four is what a 320px row holds,
+   and hiding navigation costs discoverability, so the header shows every link it has.
+   The current page is marked by the text's own underline in the accent colour — the
+   only place the accent appears in the chrome. */
+.site-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 clamp(.7rem, 2.6vw, 1.9rem); max-width: 34rem; margin-top: .75rem; }
+.site-nav a { display: inline-flex; align-items: center; min-height: 44px; white-space: nowrap; font-size: clamp(.84rem, 3.4vw, .95rem); font-weight: 600; letter-spacing: -.01em; text-decoration: none; text-underline-offset: .5em; }
+.site-nav a:hover { text-decoration: underline; text-decoration-color: var(--line-strong); text-decoration-thickness: 2px; }
+.site-nav a[aria-current] { font-weight: 750; text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 3px; }
+main { min-height: 65vh; padding-top: clamp(2.5rem, 6vw, 5rem); padding-bottom: 4rem; }
+main:focus { outline: none; }
+.eyebrow { text-transform: uppercase; letter-spacing: .13em; font-size: .75rem; font-weight: 750; color: var(--eyebrow); }
+h1 { font-size: clamp(2.8rem, 6vw, 4.8rem); line-height: 1.06; letter-spacing: -.05em; margin: 1rem 0 1.5rem; max-width: 960px; }
+h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); line-height: 1.2; letter-spacing: -.035em; margin: .5rem 0 1rem; }
+h3 { font-size: 1.25rem; line-height: 1.3; }
+.intro { max-width: 48rem; font-size: 1.15rem; }
+button, .button-link { font: inherit; font-weight: 600; background: var(--brand); color: white; border: 1px solid var(--brand); border-radius: .45rem; padding: .75rem 1.1rem; cursor: pointer; min-height: 44px; }
+button:hover, .button-link:hover { background: var(--brand-hover); }
+.button-link { display: inline-block; text-decoration: none; text-align: center; }
+.button-link.secondary { background: transparent; color: var(--brand); }
+.button-link.secondary:hover { background: var(--brand-soft); }
+:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+button:focus-visible, .button-link:focus-visible { outline-color: var(--accent); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: 1.5rem 0; }
+.understated-link { display: inline-block; font-weight: 650; }
+.placeholder { padding: 1rem 1.25rem; border: 1px dashed var(--line-strong); border-radius: .6rem; color: var(--muted); }
+.home-hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: clamp(2rem, 5vw, 4rem); align-items: center; }
+.hero-copy h1 { font-size: clamp(2.8rem, 5.5vw, 4.4rem); }
+.availability { font-size: .95rem; color: var(--muted); max-width: 34rem; }
+/* Where a photograph would go. A tinted panel with the mark keeps the two-column shape
+   until the brand has an image to put here. */
+.hero-panel, .about-panel { display: grid; place-items: center; aspect-ratio: 4 / 5; border-radius: 1rem; background: var(--brand-soft); }
+.hero-panel img, .about-panel img { width: 45%; height: auto; opacity: .9; }
+/* A real photograph in the same slot, cropped to the panel's shape. */
+.hero-photo, .about-photo { margin: 0; }
+.hero-photo img, .about-photo img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 1rem; }
+.about-photo img { aspect-ratio: 1; }
+.section-space { margin-top: clamp(3rem, 7vw, 5rem); }
+.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 2rem; margin-bottom: 1.5rem; }
+.section-heading h2 { max-width: 34rem; margin-bottom: 0; }
+.section-heading > a { flex-shrink: 0; font-weight: 650; }
+.service-preview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
+.service-preview-grid article, .service-card { padding: 1.5rem; border: 1px solid var(--line); border-radius: .8rem; background: var(--surface); }
+.service-number { font-size: .75rem; color: var(--eyebrow); font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.service-preview-grid p, .service-card p { color: var(--muted); margin-bottom: 0; }
+.personal-note { padding-block: 2rem; border-block: 1px solid var(--line-strong); display: grid; grid-template-columns: 1fr 1.2fr; gap: 3rem; }
+.personal-note p { margin-top: 0; }
+.contact-band { border-radius: 1rem; background: var(--brand-soft); padding: clamp(1.5rem, 4vw, 3rem); }
+.contact-band p { max-width: 42rem; }
+.about-layout { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: clamp(2rem, 5vw, 4rem); align-items: start; margin-top: 3rem; }
+.about-panel { aspect-ratio: 1; }
+.about-copy { max-width: 42rem; }
+.about-copy h2 { margin-top: 0; }
+.promise { display: grid; grid-template-columns: 1fr 1.2fr; gap: clamp(1.5rem, 4vw, 3rem); margin-top: clamp(2rem, 5vw, 3rem); padding: clamp(1.25rem, 3vw, 2rem); background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: .9rem; }
+.promise .eyebrow { display: block; }
+.promise h2 { margin: .35rem 0 0; font-size: clamp(1.4rem, 2.6vw, 1.9rem); }
+.promise p { margin: 0 0 .9rem; }
+.promise p:last-child { margin-bottom: 0; }
+.services-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+.service-card h2 { font-size: 1.45rem; margin-top: .8rem; }
+.scope-note { padding: 1.5rem; border-left: 4px solid var(--accent); margin-top: 2rem; background: var(--tint); }
+.scope-note h2 { font-size: 1.2rem; }
+.scope-note p { margin-bottom: 0; }
+.contact-layout { display: grid; grid-template-columns: 1.2fr 1fr; gap: 3rem; }
+.contact-card { background: var(--surface); border: 1px solid var(--line); border-radius: 1rem; padding: clamp(1.25rem, 3vw, 2rem); }
+.contact-card dt { font-weight: 750; margin-top: 1.25rem; }
+.contact-card dd { margin: .35rem 0 0; }
+.contact-checklist { padding-top: 1.5rem; }
+.contact-checklist li { margin-bottom: .75rem; }
+.site-footer { border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: start; gap: 1.5rem; font-size: .85rem; color: var(--muted); }
+.footer-info { flex: 1 1 20rem; min-width: 0; }
+/* Every page is listed once here: the header carries a few links, and someone who
+   reaches the bottom should still find the rest. */
+.footer-nav { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 0 1.4rem; margin-bottom: .25rem; }
+.footer-nav a { display: inline-flex; align-items: center; min-height: 32px; font-weight: 600; text-decoration: none; text-underline-offset: .4em; }
+.footer-nav a:hover { text-decoration: underline; }
+.footer-nav a[aria-current] { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; }
+.site-footer p { margin-bottom: 0; }
+/* The footer's contact buttons sit side by side, each taking an equal share. */
+.footer-contact { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: .75rem; flex: 1 0 20rem; max-width: 24rem; align-self: center; }
+.footer-contact a { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: .35em; min-height: 44px; padding: .55rem .5rem; border: 1px solid var(--brand); border-radius: .45rem; background: var(--brand); color: white; font-size: clamp(.82rem, 3.3vw, .88rem); font-weight: 650; line-height: 1.3; text-align: center; text-decoration: none; }
+.footer-contact a span { white-space: nowrap; }
+.footer-contact a + a { background: transparent; color: var(--brand); }
+.footer-contact a:hover { background: var(--brand-hover); border-color: var(--brand-hover); color: white; }
+.footer-contact a:focus-visible { outline-color: var(--accent); }
+.skip { position: absolute; top: -5rem; left: 1rem; padding: .5rem 1rem; background: var(--surface); z-index: 10; }
+.skip:focus { top: .5rem; }
+@media (min-width: 860px) {
+  .site-header { display: flex; justify-content: space-between; align-items: center; gap: 2rem; }
+  .site-nav { flex: 0 1 auto; justify-content: end; gap: 0 1.75rem; max-width: none; margin-top: 0; }
+}
+/* Small phones give the gutters back to the content, so the links still hold one row. */
+@media (max-width: 380px) {
+  .site-header, main, .site-footer { padding-inline: 1.25rem; }
+  /* Four links, one of them two words, is a tight fit at 320px: close the gaps a little
+     and let the type drop a step rather than wrap. */
+  .site-nav { gap: 0 .4rem; }
+  .site-nav a { font-size: .78rem; letter-spacing: -.02em; }
+}
+@media (max-width: 760px) {
+  .home-hero, .about-layout, .contact-layout, .personal-note { grid-template-columns: minmax(0, 1fr); gap: 2rem; }
+  .promise { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+  .hero-panel { max-width: 480px; aspect-ratio: 4 / 3; }
+  .hero-photo { max-width: 480px; }
+  .hero-photo img { aspect-ratio: 4 / 3; }
+  .about-photo { max-width: 260px; }
+  .about-panel { max-width: 260px; }
+  .service-preview-grid, .services-grid { grid-template-columns: minmax(0, 1fr); }
+  .section-heading { display: block; }
+  .section-heading > a { display: inline-block; margin-top: 1rem; }
+  .site-footer { flex-direction: column; }
+  .footer-info { flex: 0 0 auto; }
+  .footer-contact { flex: 0 0 auto; max-width: none; align-self: stretch; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+

@@ -1,0 +1,18 @@
+.git
+.env
+.env.*
+recovery
+**/node_modules
+**/__pycache__
+.venv
+app/static
+app/media
+*.log
+
+# The assistants' shared notes live beside the content they edit; they are not part of the site.
+app/HANDOFF.md
+
+# Task list and assistant skills live in the tree but are not part of the site.
+app/inbox
+.hermes
+

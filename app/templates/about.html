@@ -1,0 +1,14 @@
+<section class="about-layout" aria-label="About">
+  {% if site.about_photo %}<figure class="about-photo"><img src="{{ photo(site.about_photo) }}" alt="{{ site.about_alt }}" loading="lazy" decoding="async"></figure>
+  {% else %}<div class="about-panel" aria-hidden="true"><img src="{{ asset('/brand/logo.svg') }}" alt="" width="200" height="200"></div>{% endif %}
+  <div class="about-copy">
+    <h2>A heading that says what you stand for.</h2>
+    <p>Two or three paragraphs about the people behind the name: background, what they are good at, and the part of the work most visitors never see.</p>
+    <p>Keep claims specific and checkable. A date, a place or a named credential carries more weight than an adjective.</p>
+    <div class="actions"><a class="button-link" href="/contact">Get in touch</a><a class="understated-link" href="/services">What we offer →</a></div>
+  </div>
+</section>
+<aside class="scope-note" aria-labelledby="scope-heading">
+  <h2 id="scope-heading">A note on scope.</h2>
+  <p>Anything the site should say once, plainly — what is and is not offered, a required disclosure, or a boundary worth stating up front.</p>
+</aside>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="{{ description }}">
+  <link rel="canonical" href="{{ canonical }}">
+  <title>{{ label }} · {{ site.name }}</title>
+  <link rel="icon" href="{{ asset('/brand/icon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ asset('/static/site.css') }}">
+  <script type="module" src="{{ asset('/static/site.js') }}"></script>
+</head>
+<body hx-boost:inherited="true">
+  <a class="skip" href="#main" hx-boost="false">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="/"{% if slug == '' %} aria-current="page"{% endif %} aria-label="{{ site.name }} home"><img class="brand-mark" src="{{ asset('/brand/logo.svg') }}" alt="" width="52" height="52"><span class="brand-text"><span>{{ site.name }}</span><span class="brand-detail">{{ site.tagline }}</span></span></a>
+    <nav class="site-nav" aria-label="Main navigation">
+      {% for path, label in nav %}<a href="/{{ path }}"{% if slug == path %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+    </nav>
+  </header>
+  <main id="main" tabindex="-1" data-description="{{ description }}" data-canonical="{{ canonical }}">
+    {% if slug == '' %}
+      {% include 'home.html' %}
+    {% else %}
+      <div class="eyebrow">{{ site.name }} / {{ label }}</div>
+      <h1>{{ title }}</h1>
+      <p class="intro">{{ description }}</p>
+      {% if slug == 'about' %}{% include 'about.html' %}
+      {% elif slug == 'services' %}{% include 'services.html' %}
+      {% elif slug == 'contact' %}{% include 'contact.html' %}{% endif %}
+    {% endif %}
+  </main>
+  <footer class="site-footer">
+    <nav class="footer-nav" aria-label="All pages">
+      {% for path, info in pages.items() %}<a href="/{{ path }}"{% if slug == path %} aria-current="page"{% endif %}>{{ info[0] }}</a>{% endfor %}
+    </nav>
+    <div class="footer-info"><strong>{{ site.name }}</strong><p>{{ site.area }}<br>{{ site.hours }}</p></div>
+    <div class="footer-contact">
+      {% if site.phone %}<a href="tel:{{ site.phone }}" hx-boost="false">Call <span>{{ site.phone_label }}</span></a>{% endif %}
+      <a href="/contact">Get in touch</a>
+    </div>
+  </footer>
+</body>
+</html>

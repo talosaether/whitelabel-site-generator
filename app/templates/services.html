@@ -1,0 +1,16 @@
+<section class="services-grid section-space" aria-label="Services">
+  {% for name, copy in services %}
+  <article class="service-card"><span class="service-number">{{ '%02d'|format(loop.index) }}</span><h2>{{ name }}</h2><p>{{ copy }}</p></article>
+  {% endfor %}
+</section>
+<section class="promise" aria-labelledby="promise-heading">
+  <div>
+    <span class="eyebrow">How it works</span>
+    <h2 id="promise-heading">What to expect.</h2>
+  </div>
+  <div>
+    <p>Three short paragraphs on how an engagement runs: how it starts, how it is priced or scheduled, and what happens if something changes.</p>
+    <p>This block is for character, not a price list. Figures belong in a conversation.</p>
+  </div>
+</section>
+<section class="contact-band section-space" aria-labelledby="service-contact-heading"><h2 id="service-contact-heading">Not sure where your need fits?</h2><p>Send a short description and we will say whether we can help.</p><a class="button-link" href="/contact">Tell us what you need →</a></section>

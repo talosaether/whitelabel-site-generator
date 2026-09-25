@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+recovery/
+node_modules/
+app/static/
+app/media/
+__pycache__/
+*.py[cod]
+.venv/
+*.log

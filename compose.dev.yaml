@@ -1,0 +1,63 @@
+# The development host: dev.example.com serves this working tree, live.
+#
+# Layered over compose.yaml by COMPOSE_FILE=compose.yaml:compose.dev.yaml in the dev
+# host's .env, so a plain `docker compose up -d` there picks it up. It changes three
+# things and nothing else:
+#
+#   - `app` runs the same image, but with ./app bind-mounted over /srv/app and uvicorn
+#     in --reload mode. A template or Python edit is live on the next request.
+#   - `assets` is a Node container running Vite in watch mode, writing site.css and
+#     site.js straight into ./app/static, which the app container sees through the same
+#     bind mount. A stylesheet edit is live on the next reload.
+#   - `photos` is a Python container running scripts/build_photos.py in watch mode: a
+#     JPEG saved into ./app/photos is a WebP in ./app/media a couple of seconds later.
+#   - Caddy serves Caddyfile.dev, which adds X-Robots-Tag: noindex so the development
+#     site never competes with production in search results.
+#
+# Production never sees this file. The deploy workflow runs `docker compose` in a
+# checkout whose .env has no COMPOSE_FILE, so it gets compose.yaml alone.
+services:
+  app:
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers",
+              "--reload", "--reload-dir", "/srv/app"]
+    volumes:
+      - ./app:/srv/app:ro
+  assets:
+    # Same pin as the Dockerfile's assets stage, so the watcher builds what CI builds.
+    image: node:25-alpine@sha256:bdf2cca6fe3dabd014ea60163eca3f0f7015fbd5c7ee1b0e9ccb4ced6eb02ef4
+    restart: unless-stopped
+    working_dir: /build/frontend
+    # npm ci against the committed lockfile on every start, then watch. The anonymous
+    # volume keeps node_modules inside the container rather than on the host.
+    command: ["sh", "-c", "npm ci --no-audit --no-fund && exec npx vite build --watch"]
+    volumes:
+      - ./frontend:/build/frontend
+      - /build/frontend/node_modules
+      - ./app/static:/build/app/static
+    mem_limit: 512m
+    pids_limit: 128
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+  photos:
+    # Same pin as the Dockerfile's photos stage, so the watcher builds what CI builds.
+    image: python:3.14-slim@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2
+    restart: unless-stopped
+    working_dir: /build
+    command: ["sh", "-c", "pip install --no-cache-dir -q Pillow==12.3.0 && exec python scripts/build_photos.py --watch"]
+    volumes:
+      - ./scripts/build_photos.py:/build/scripts/build_photos.py:ro
+      - ./app/photos:/build/app/photos:ro
+      - ./app/media:/build/app/media
+    mem_limit: 256m
+    pids_limit: 64
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+  caddy:
+    volumes:
+      - ./Caddyfile.dev:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config

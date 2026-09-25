@@ -1,0 +1,57 @@
+# Dependency update PRs. Each ecosystem opens against main and runs the `check` gate like
+# any other PR, so a bump that breaks a test never merges. Reasoning: ADR-0011.
+version: 2
+updates:
+  # Runtime Python deps. This is the one that matters for security: it is how the starlette
+  # DoS would have surfaced on its own, as a PR, instead of waiting for someone to run
+  # pip-audit by hand.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+
+  # The browser test toolchain. Not shipped, but a compromised dev dependency runs in CI
+  # with repository access, so it is worth keeping current.
+  - package-ecosystem: npm
+    directory: /tests/browser
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps(test)
+
+  # The frontend bundle. This IS shipped - it becomes site.js.
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps(frontend)
+
+  # The three base images in the Dockerfile, pinned by digest. Dependabot opens a PR when
+  # a tag moves, so a base image change arrives as a reviewable diff through the check gate
+  # rather than arriving silently the next time something rebuilds.
+  #
+  # This does NOT cover compose.yaml: the docker ecosystem reads Dockerfiles, Containerfiles
+  # and Kubernetes manifests, not Compose files. Caddy's pin is watched by the images job in
+  # .github/workflows/audit.yml.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps(docker)
+
+  # The Actions themselves. Pins actions/checkout, setup-node and friends, and bumps them
+  # when a new SHA/tag lands - the supply-chain surface that is easiest to forget.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci

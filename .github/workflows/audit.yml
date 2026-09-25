@@ -1,0 +1,69 @@
+# Scheduled dependency audit. Separate from deploy.yml on purpose: a CVE published against a
+# dependency you did not touch should not turn a code merge red. This runs on its own clock,
+# and its failure means "a dependency needs attention", never "your change is bad".
+name: Audit
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'   # Mondays, 06:17 UTC. Off the hour to be a good scheduler citizen.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - run: pipx run pip-audit -r requirements.txt --strict --progress-spinner off
+
+  # Caddy's digest lives in compose.yaml, which Dependabot's docker ecosystem does not read.
+  # Without this, pinning it would trade a floating tag for a permanently stale one — worse
+  # than where we started. A failure here means "bump the caddy pin", which is a one-line PR.
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: The pinned Caddy digest is still the current one
+        run: |
+          ref=$(grep -oE 'caddy:[^@[:space:]]+@sha256:[a-f0-9]{64}' compose.yaml)
+          [ -n "$ref" ] || { echo '::error::no digest-pinned caddy image found in compose.yaml'; exit 1; }
+          tag=${ref%@*}
+          pinned=${ref#*@}
+
+          # A pin that no longer resolves breaks every build, so check it exists at all.
+          docker buildx imagetools inspect "$ref" >/dev/null ||
+            { echo "::error::pinned image $ref no longer resolves"; exit 1; }
+
+          current=$(docker buildx imagetools inspect "$tag" --format '{{.Manifest.Digest}}')
+          echo "pinned:  $pinned"
+          echo "current: $current"
+          if [ "$pinned" != "$current" ]; then
+            echo "::error::$tag has moved. Update the pin in compose.yaml to $current"
+            exit 1
+          fi
+
+  npm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: [frontend, tests/browser]
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # Production deps for the shipped bundle; dev deps included for the test toolchain,
+      # which runs in CI with repository access.
+      - run: npm audit --audit-level=high --package-lock-only

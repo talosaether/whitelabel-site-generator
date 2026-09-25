@@ -1,0 +1,1 @@
+{"private":true,"type":"module","scripts":{"build":"vite build"},"dependencies":{"htmx.org":"4.0.0","vue":"3.5.43"},"devDependencies":{"@vitejs/plugin-vue":"6.0.9","vite":"8.3.0"}}

@@ -1,0 +1,28 @@
+<section class="home-hero" aria-labelledby="home-heading">
+  <div class="hero-copy">
+    <div class="eyebrow">{{ site.name }} / {{ site.area }}</div>
+    <h1 id="home-heading">{{ title }}</h1>
+    <p class="intro">{{ description }}</p>
+    <p class="availability">{{ site.area }}. {{ site.hours }}.</p>
+    <div class="actions">
+      {% if site.phone %}<a class="button-link" href="tel:{{ site.phone }}" hx-boost="false">Call {{ site.phone_label }}</a>{% endif %}
+      <a class="button-link{% if site.phone %} secondary{% endif %}" href="/contact">Get in touch</a>
+    </div>
+    <a class="understated-link" href="/services">See what we offer →</a>
+  </div>
+  {% if site.hero_photo %}<figure class="hero-photo"><img src="{{ photo(site.hero_photo) }}" alt="{{ site.hero_alt }}" fetchpriority="high"></figure>
+  {% else %}<div class="hero-panel" aria-hidden="true"><img src="{{ asset('/brand/logo.svg') }}" alt="" width="220" height="220"></div>{% endif %}
+</section>
+<section class="home-services section-space" aria-labelledby="home-services-heading">
+  <div class="section-heading"><div><span class="eyebrow">Services</span><h2 id="home-services-heading">Three things worth leading with.</h2></div><a href="/services">See everything we do →</a></div>
+  <div class="service-preview-grid">
+    {% for name, copy in services[:3] %}
+    <article><span class="service-number">{{ '%02d'|format(loop.index) }}</span><h3>{{ name }}</h3><p>{{ copy }}</p></article>
+    {% endfor %}
+  </div>
+</section>
+<section class="personal-note section-space" aria-labelledby="personal-heading">
+  <div><span class="eyebrow">A short note</span><h2 id="personal-heading">Why this exists.</h2></div>
+  <div><p>A paragraph in the owner's voice: what they care about, and what someone gets by choosing them. Keep it to three sentences.</p><a href="/about">More about us →</a></div>
+</section>
+<section class="contact-band section-space" aria-labelledby="home-contact-heading"><h2 id="home-contact-heading">Ready when you are.</h2><p>A sentence on what to send and what happens next.</p><a class="button-link" href="/contact">Get in touch →</a></section>

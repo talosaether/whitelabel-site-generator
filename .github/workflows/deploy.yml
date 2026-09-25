@@ -1,0 +1,321 @@
+# Build and test on a runner; only then ship main to production.
+#
+# Production's checkout must be /srv/website, which is where scripts/bootstrap.sh puts it.
+#
+# Setup is two repository secrets — DEPLOY_KEY (an SSH private key whose public half is in
+# the production host's authorized_keys) and DEPLOY_KNOWN_HOSTS (that host's SSH host key).
+# DEPLOY_HOST, a repository *variable*, names the production host. Until it is set, every
+# push to main stops after the check job: nothing is published, nothing is deployed, and
+# the run is green. DEPLOY_USER (default root) is optional. See DEPLOY.md, "Automatic deploys".
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# One run per branch. A superseded pull-request run is cancelled; a superseded main run is
+# not, because a half-applied deploy is worse than a queued one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  SITE: https://${{ vars.DEPLOY_HOST || 'example.com' }}
+  # The check job publishes here; the deploy job tells the host to run exactly this.
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  # The gate. Stands the whole stack up on the runner and tests it there, so a change that
+  # breaks the site is caught before anything reaches production. Touches nothing live and
+  # needs no secrets, so it runs on pull requests from anywhere.
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Only to publish the image this job tested. Pull requests skip that step, and a fork's
+    # token is read-only regardless.
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      # Needs no stack and no browsers, so these fail in seconds rather than after the
+      # build. They guard the deployment contract: the host's checkout is the pipeline's
+      # alone, the containers are bounded, every image is pinned, and the dev overlay
+      # still does what it says.
+      - name: The bootstrap guard holds
+        run: python3 tests/test_bootstrap_guard.py
+      - name: Production runtime policy
+        run: python3 tests/test_production_runtime.py
+      - name: Base images are pinned by digest
+        run: python3 tests/test_image_pinning.py
+      - name: The development overlay serves the working tree
+        run: python3 tests/test_dev_overlay.py
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/browser/package-lock.json
+      - run: npm ci
+        working-directory: tests/browser
+      - run: npx playwright install --with-deps chromium
+        working-directory: tests/browser
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ../../recovery/browsers
+
+      - name: Build the image and start the stack
+        run: |
+          # Plain HTTP on the runner, and a port for the www redirect rather than its real
+          # hostname: Caddy provisions a certificate for every named site it is given, and
+          # this host can answer no challenge for either name.
+          printf 'SITE_ADDRESS=:80\nWWW_ADDRESS=:8080\nAPP_IMAGE=%s\n' "$IMAGE:$GITHUB_SHA" > .env
+          docker compose up -d --build
+          for _ in $(seq 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost/healthz) || true
+            if [ "$code" = 200 ]; then break; fi
+            sleep 2
+          done
+          [ "$code" = 200 ] || { docker compose ps; docker compose logs --tail 80; exit 1; }
+
+      - name: Pages, headers and caching
+        run: python3 tests/smoke.py http://localhost
+      - name: Browser suite, desktop and mobile
+        run: npm test
+        working-directory: tests/browser
+        env:
+          BASE_URL: http://localhost
+
+      # Only now, with every suite green against this exact image. The deploy job will
+      # pull this tag rather than rebuilding from source on the host, so what ships is
+      # the artefact that was tested rather than a rebuild that ought to match it.
+      - name: Publish the tested image
+        if: github.event_name != 'pull_request' && vars.DEPLOY_HOST != ''
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" |
+            docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker logout ghcr.io
+          echo "published $IMAGE:$GITHUB_SHA"
+
+      - name: What the stack said, if any of that failed
+        if: failure()
+        run: docker compose logs --tail 120
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-trace
+          path: recovery/browser-results
+          retention-days: 7
+      - name: Stop the stack
+        if: always()
+        run: docker compose down
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request' && vars.DEPLOY_HOST != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The repository and its package are private. This job's own token — minted for this
+    # run, dead when it ends — is the credential the host uses to fetch the commit and
+    # pull the image. It is handed over for the length of one SSH session and nothing is
+    # left on the host afterwards. See ADR-0011.
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Authorise the runner against production
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$DEPLOY_KEY" ] || [ -z "$KNOWN_HOSTS" ]; then
+            echo "::error::DEPLOY_KEY and DEPLOY_KNOWN_HOSTS are not set. See DEPLOY.md."
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # A malformed secret — the public half pasted by mistake, a truncated paste —
+          # otherwise surfaces as the host's generic "Permission denied (publickey)", which
+          # looks identical to a key that was never authorised. Fail here instead, and print
+          # the fingerprint (public information) so it can be compared with the key the host
+          # actually holds: `ssh-keygen -lf <key>.pub` on the machine that generated it.
+          ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null 2>&1 ||
+            { echo "::error::DEPLOY_KEY is not a valid private key. Set it from the private key file, not the .pub."; exit 1; }
+          echo "deploy key: $(ssh-keygen -lf ~/.ssh/id_ed25519)"
+          echo "host key:   $(ssh-keygen -lf ~/.ssh/known_hosts)"
+
+      - name: Deploy the tested image
+        env:
+          TARGET: ${{ vars.DEPLOY_USER || 'root' }}@${{ vars.DEPLOY_HOST }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ssh -o BatchMode=yes "$TARGET" 'bash -s --' "$GITHUB_SHA" "$IMAGE:$GITHUB_SHA" "$REPO_URL" "$TOKEN" <<'REMOTE'
+          set -euo pipefail
+          sha=$1
+          image=$2
+          url=$3
+          token=$4
+          # The host runs whatever this names, so it is checked rather than trusted.
+          [[ "$image" =~ ^ghcr\.io/[a-z0-9._/-]+:[0-9a-f]{40}$ ]] || {
+            echo "::error::refusing to deploy unrecognised image: $image"; exit 1; }
+          repository=${image%:*}
+
+          cd /srv/website
+          previous=$(git rev-parse HEAD)
+          echo "deploying $sha over $previous"
+          echo "image $image"
+
+          # Keep whatever is serving now under a tag of its own, so a rollback is a restart
+          # rather than a rebuild. This also covers the first deploy after bootstrap, where
+          # the running image was built on this host and has no registry tag.
+          rollback_image=""
+          current_container=$(docker compose ps -q app 2>/dev/null || true)
+          if [ -n "$current_container" ]; then
+            rollback_image="$repository:$previous"
+            docker tag "$(docker inspect -f '{{.Image}}' "$current_container")" "$rollback_image"
+            echo "rollback image $rollback_image"
+          fi
+
+          wait_healthy() {
+            local state=starting
+            for _ in $(seq 60); do
+              state=$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q app)" 2>/dev/null || echo starting)
+              if [ "$state" = healthy ]; then return 0; fi
+              sleep 3
+            done
+            echo "app is $state after three minutes" >&2
+            return 1
+          }
+
+          # One credential for the registry and the repository, held for this session only.
+          # Whatever happens below — success, rollback, an unexpected exit — the registry
+          # login is removed, and the git header is passed per command so nothing reaches
+          # .git/config. The remote URL itself stays plain.
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+          docker login ghcr.io -u x-access-token --password-stdin <<<"$token" >/dev/null 2>&1
+          git_auth="http.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$token" | base64 -w0)"
+          git remote set-url origin "$url" 2>/dev/null || git remote add origin "$url"
+          git -c "$git_auth" fetch --prune origin main
+          # A deploy target, not a workspace: anything edited on the host is discarded.
+          # .env is untracked and survives, which is how SITE_ADDRESS stays pinned.
+          git reset --hard "$sha"
+          touch .env
+
+          # compose.yaml names its project `whitelabel-local`, so a clone of this repository
+          # elsewhere on the host cannot act on the live containers. This checkout is the
+          # one entitled to `whitelabel`. Set before any compose command below runs.
+          if grep -q '^COMPOSE_PROJECT_NAME=' .env; then
+            sed -i "s|^COMPOSE_PROJECT_NAME=.*|COMPOSE_PROJECT_NAME=whitelabel|" .env
+          else
+            printf 'COMPOSE_PROJECT_NAME=%s\n' whitelabel >> .env
+          fi
+          # And never the development overlay: production runs compose.yaml alone.
+          sed -i '/^COMPOSE_FILE=/d' .env
+
+          set_app_image() {
+            if grep -q '^APP_IMAGE=' .env; then
+              sed -i "s|^APP_IMAGE=.*|APP_IMAGE=$1|" .env
+            else
+              printf 'APP_IMAGE=%s\n' "$1" >> .env
+            fi
+          }
+          set_app_image "$image"
+
+          # Before anything is touched. A registry outage, a bad tag or a half-published
+          # image fails here, with the site still serving the previous commit and nothing
+          # to roll back. The checkout is already at $sha, which the rollback path resets.
+          docker pull "$image" || {
+            echo "::error::could not pull $image; the site is untouched on $previous"
+            git reset --hard "$previous"
+            set_app_image "${rollback_image:-$image}"
+            exit 1
+          }
+
+          # Any failure rolls back the same way, because there is no reliable way to tell
+          # from here whether the containers were replaced before it happened: caddy
+          # depends_on app with condition: service_healthy, so `up` itself fails once the
+          # new app container is in place and refusing to pass its healthcheck. Resetting
+          # the checkout without restoring the image would leave the host claiming a commit
+          # it is not serving.
+          #
+          # The rollback starts an image that was already running on this host minutes ago,
+          # so it cannot fail the way a rebuild can: no npm ci, no registry.
+          roll_back() {
+            echo "::error::$1"
+            git reset --hard "$previous"
+            if [ -z "$rollback_image" ]; then
+              echo "::error::nothing was running to roll back to - the site is down"
+              exit 1
+            fi
+            echo "rolling back to $previous on $rollback_image"
+            set_app_image "$rollback_image"
+            if docker compose up -d --no-build && wait_healthy; then
+              echo "rolled back; the site is serving $previous"
+            else
+              echo "::error::the rollback is unhealthy too - the site is down"
+            fi
+            exit 1
+          }
+
+          docker compose up -d --no-build || roll_back "compose up failed for $sha"
+          wait_healthy || { docker compose logs --tail 80 app; roll_back "$sha never became healthy"; }
+
+          # The Caddyfile is bind-mounted, so Compose does not recreate the proxy when it
+          # changes and an edit would otherwise never reach the running config. Reloading
+          # is graceful. `docker compose exec` otherwise inherits the SSH here-document on
+          # stdin and can consume every deployment command that follows this reload.
+          docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile </dev/null
+
+          # Prove the host is on the commit this run deployed, rather than assuming it.
+          head=$(git rev-parse HEAD)
+          [ "$head" = "$sha" ] || { echo "::error::HEAD is $head, expected $sha"; exit 1; }
+
+          # And that it is serving the image the gate tested, not one left over from an
+          # earlier run. The checkout and the running container have to agree.
+          running=$(docker inspect -f '{{.Config.Image}}' "$(docker compose ps -q app)")
+          [ "$running" = "$image" ] || {
+            echo "::error::serving $running, expected $image"; exit 1; }
+
+          # Deployed images accumulate one tag per commit. Keep the one serving and the one
+          # a rollback would need; discard the rest. The build cache is pruned too: nothing
+          # builds here any more, but a hand-run `compose up --build` would still fill it.
+          docker image ls "$repository" --format '{{.Repository}}:{{.Tag}}' |
+            while read -r tag; do
+              case "$tag" in
+                "$image"|"$rollback_image") ;;
+                *) docker image rm "$tag" >/dev/null 2>&1 || true ;;
+              esac
+            done
+          docker image prune -f >/dev/null
+          docker builder prune -f --filter until=168h >/dev/null
+          df -h / | tail -1
+          docker compose ps
+          REMOTE
+
+      - name: The site answers over HTTPS
+        run: |
+          for _ in $(seq 10); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$SITE/") && [ "$code" = 200 ] && break
+            sleep 3
+          done
+          echo "$SITE -> $code"
+          [ "$code" = 200 ]
+
+  # Post-deploy, against production. The application was already tested on the runner, so
+  # what is left to prove is that this host, this Caddy and this certificate are serving it.
+  verify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Pages, headers and caching
+        run: python3 tests/smoke.py "$SITE"

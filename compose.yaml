@@ -1,0 +1,73 @@
+# A clone of this repository gets its own Compose project, so `docker compose` in a stray
+# checkout can never reach the live containers. Production opts back in to the name
+# `whitelabel` through COMPOSE_PROJECT_NAME in its untracked .env — written by
+# scripts/bootstrap.sh on a fresh host and ensured by deploy.yml on every deploy. The
+# development host uses `whitelabel-dev` the same way; see compose.dev.yaml.
+name: whitelabel-local
+
+services:
+  app:
+    build: .
+    # `build` and `image` together: a local `docker compose up --build` builds and tags
+    # whitelabel-app:local, while production sets APP_IMAGE to the registry tag of the
+    # image the check job already built and tested, and runs --no-build. The default is
+    # deliberately a local tag, so a checkout without APP_IMAGE never pulls a deploy image.
+    image: ${APP_IMAGE:-whitelabel-app:local}
+    restart: unless-stopped
+    read_only: true
+    # The ceiling is not sized to the app (tens of MiB resident) but to what else shares
+    # a small box. Unbounded, a runaway here lets the kernel choose the victim, and it may
+    # well choose dockerd or caddy; bounded, the app alone dies and `restart:
+    # unless-stopped` plus the healthcheck bring it back.
+    mem_limit: 512m
+    pids_limit: 128
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      # The container starts in about three seconds. These numbers set how long a deploy
+      # waits to call itself good (start_period + one interval) and how long a bad one
+      # takes to be rolled back (start_period + retries x interval): about 10s and 20s.
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+  caddy:
+    # Digest-pinned like the Dockerfile's bases, but Dependabot does not see it: its
+    # docker ecosystem reads Dockerfiles and Kubernetes manifests, not Compose files.
+    # The images job in .github/workflows/audit.yml watches this one instead.
+    image: caddy:2-alpine@sha256:de23def33b17fb5d1290b0f6c2add1d70780e52341896c00a4c8a2a2fe9d355e
+    restart: unless-stopped
+    # Losing the proxy takes the whole site off the internet, so it must not be the
+    # process the kernel reaches for when something else on the host misbehaves.
+    mem_limit: 128m
+    pids_limit: 64
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-example.com}
+      # Caddy provisions a certificate for every named site, so a host that cannot
+      # answer a challenge for www must be given an address (":8080"), not the name.
+      WWW_ADDRESS: ${WWW_ADDRESS:-www.example.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,23 @@
+{$SITE_ADDRESS:example.com} {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		-Server
+	}
+	reverse_proxy app:8000 {
+		# A deploy replaces the app container, and it needs a couple of seconds to start
+		# serving. Hold the connection and retry rather than handing the visitor a 502:
+		# a page that takes three seconds is a worse page, a 502 is no page at all.
+		lb_try_duration 15s
+		lb_try_interval 250ms
+	}
+}
+
+# www redirects to the bare domain, which is what every canonical URL names.
+# Its own address rather than `www.{$SITE_ADDRESS}`, because SITE_ADDRESS is ":80"
+# during a pre-DNS first boot and "www.:80" is not a valid site address.
+{$WWW_ADDRESS:www.example.com} {
+	redir https://{$SITE_ADDRESS:example.com}{uri} permanent
+}
