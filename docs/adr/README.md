@@ -19,6 +19,7 @@ project with the same architecture and carried over with the reasoning intact.
 | [0011](0011-private-repository.md) | The repository is private; production borrows the deploy job's token |
 | [0012](0012-photos.md) | Photo originals tracked beside the app; only derivatives served |
 | [0013](0013-owner-assistant-account.md) | The owner's assistant is an unprivileged account; the ACLs are the boundary |
+| [0014](0014-merge-commits-and-a-required-check.md) | Merge commits only, and a ruleset that makes auto-merge wait |
 
 Format: context, decision, consequences. Keep them short; if one needs reversing, add a
 new record that supersedes it rather than rewriting history.

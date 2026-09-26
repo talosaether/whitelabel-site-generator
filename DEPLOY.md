@@ -186,6 +186,31 @@ private, like the repository, and stays that way.
 Then push to `main`. The run fails on its first deploy step, before touching the host, if
 either secret is missing.
 
+**Three settings in the web UI** make a pull request merge itself when `check` is green
+([ADR-0014](docs/adr/0014-merge-commits-and-a-required-check.md)). None can be set with a
+token that lacks administration, so an owner does them once:
+
+1. **Settings → General → Pull Requests:** "Allow auto-merge" on; "Allow squash merging"
+   and "Allow rebase merging" off, so the merge button can only produce merge commits.
+2. **Settings → Rules → Rulesets → New branch ruleset:** name `require_pr_workflow`, target
+   `main`, enforcement active, no bypass actors. Rules: restrict deletions, block force
+   pushes, require status checks to pass with the one check `check` from GitHub Actions,
+   "require branches to be up to date" off. The picker offers only checks that have already
+   run, so push the workflow to `main` once first.
+3. Optionally "Automatically delete head branches", so merged `hermes/` branches do not pile up.
+
+Without the ruleset, auto-merge has nothing to wait for: arming either fails, and the
+owner's `/ship` reports that the pull request is waiting for someone, or it merges at once.
+Verify:
+
+```sh
+gh api repos/OWNER/REPO -q '{auto: .allow_auto_merge, squash: .allow_squash_merge, rebase: .allow_rebase_merge}'
+gh api repos/OWNER/REPO/rules/branches/main -q '.[].type'
+```
+
+The first should show auto-merge on and both others off; the second should list `deletion`,
+`non_fast_forward` and `required_status_checks`.
+
 ### When it goes wrong
 
 - **`Permission denied (publickey)`** — the public half is not in the host's
