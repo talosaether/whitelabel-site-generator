@@ -55,6 +55,8 @@ jobs:
         run: python3 tests/test_image_pinning.py
       - name: The development overlay serves the working tree
         run: python3 tests/test_dev_overlay.py
+      - name: The instance's names agree everywhere
+        run: python3 tests/test_installation_names.py
 
       - uses: actions/setup-node@v7
         with:

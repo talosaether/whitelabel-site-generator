@@ -23,6 +23,12 @@
   `app/` and `frontend/`. `app/HANDOFF.md` says who does what and how Hermes ships a change
   (a PR that auto-merges when `check` is green). Stage files by name, never `git add -A`:
   the other assistant may have work in progress in the same tree.
+- **Pull requests opened by the developer's assistant are the developer's to merge.** Open
+  the PR, put the merge command at the top of the message (`gh pr merge <n> --merge`), and
+  after the merge `git pull --rebase --autostash` here and watch the deploy with `gh run`.
+  Never arm auto-merge: `.claude/settings.json` denies `gh pr merge`, and the owner's `/ship`
+  is the only thing that arms it. `docs/PLAYBOOK.md` is the installation order and the
+  exceptions; `scripts/preflight.sh` checks the setup (ADR-0015).
 - `compose.yaml` names its project `whitelabel-local` so a stray clone cannot act on a live
   stack. The dev host's `.env` opts into `whitelabel-dev` and the overlay; production's
   opts into `whitelabel`. Do not "fix" the `name:` line, and never add `COMPOSE_FILE` to

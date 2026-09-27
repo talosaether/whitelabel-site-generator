@@ -60,6 +60,9 @@ The tests that come with these assert structure, not copy, so they survive brand
   wider than either job, and its absence is a feature.
 - **`DEPLOY_HOST`** as a repository variable and the two deploy secrets, per `DEPLOY.md`.
 
+`scripts/preflight.sh OWNER/REPO` checks these and says which are missing; `docs/PLAYBOOK.md`
+is the same setup as an ordered procedure, with the exceptions.
+
 ## The development host
 
 A second host, not a preview mechanism on production: ADR-0010 explains why the machinery
