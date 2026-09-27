@@ -11,7 +11,9 @@ Two ways to use it:
 
 - **Start a new site.** Copy the repository (a template, a fork, or a clone with a new
   remote), then work through "Branding it" below and [DEPLOY.md §3](DEPLOY.md#3-serving-a-different-domain)
-  for the domain. Nothing deploys until the `DEPLOY_HOST` repository variable is set, so
+  for the domain. [docs/PLAYBOOK.md](docs/PLAYBOOK.md) is the order of operations, who runs
+  each step and where, and what went wrong on the first installations; `scripts/preflight.sh`
+  checks the result. Nothing deploys until the `DEPLOY_HOST` repository variable is set, so
   the first pushes only run the tests. This template is public; an instance may be private,
   and [ADR-0011](docs/adr/0011-private-repository.md) covers what that changes.
 - **Adopt the process in a site that already exists.** [docs/ADOPTING.md](docs/ADOPTING.md)
@@ -89,6 +91,7 @@ compose.yaml             The stack: app + Caddy. Both hosts run this.
 compose.dev.yaml         The development overlay: bind mount, reload, asset watcher, noindex
 Caddyfile, Caddyfile.dev Production and development proxy config
 scripts/bootstrap.sh     Stand production up on a fresh host
+scripts/preflight.sh     Is the repository, and this host, set up the way the process assumes?
 tests/                   Dependency-free HTTP and policy suites, plus Playwright
 docs/adr/                Why things are the way they are
 .github/workflows/       Deploy on push to main, then test the live site; weekly audit
@@ -111,6 +114,7 @@ python3 tests/test_production_runtime.py    # container limits and project isola
 python3 tests/test_image_pinning.py         # every registry image pinned by digest
 python3 tests/test_dev_overlay.py           # the overlay bind-mounts, reloads, watches, noindexes
 python3 tests/test_bootstrap_guard.py       # bootstrap refuses a checkout the pipeline owns
+python3 tests/test_installation_names.py    # tree path, Compose project and domain agree everywhere
 cd tests/browser && npm ci
 PLAYWRIGHT_BROWSERS_PATH=../../recovery/browsers npx playwright install chromium
 BASE_URL=https://dev.example.com npm test   # desktop + mobile, axe WCAG 2 A/AA
@@ -140,6 +144,7 @@ Short records of why the non-obvious choices were made, in [docs/adr](docs/adr):
 | [0011](docs/adr/0011-private-repository.md) | The repository is private; the deploy job's token is the only credential production ever sees |
 | [0012](docs/adr/0012-photos.md) | Photo originals are tracked beside the app; only generated derivatives are served |
 | [0013](docs/adr/0013-owner-assistant-account.md) | The owner's assistant runs as an unprivileged account; the ACLs are the boundary |
+| [0015](docs/adr/0015-a-person-merges-the-developers-pull-requests.md) | A person merges the developer's assistant's pull requests; `.claude/settings.json` says so |
 
 ## Conventions
 
