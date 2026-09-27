@@ -32,6 +32,10 @@ directories or commit it promptly.
 **Merge commits, not squash.** The local `main` in this tree is ahead of GitHub by the
 commits just made; a merge commit keeps those commits as ancestors, so `git pull --rebase
 --autostash` brings the tree back in line without conflicts. A squash would rewrite them.
+Squash and rebase merging are off at the repository level for that reason, and a ruleset
+requiring `check` is what auto-merge waits for ([ADR-0014](../docs/adr/0014-merge-commits-and-a-required-check.md)).
+If `/ship` reports that the pull request is "waiting for someone to merge it", arming
+failed, and the ruleset is the first thing to check.
 
 The assistant's skills live in `.hermes/skills/` (`site`, `todo`, `recent`, `ship`). They
 are in the repo on purpose: the developer can read and change how the assistant works,
