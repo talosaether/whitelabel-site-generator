@@ -54,6 +54,49 @@ Two things do still need a restart: a change to `requirements.txt` or `frontend/
 The dev host is small (1 GB). Docker was installed there with a 2 GB swapfile
 (`/swapfile`, in `/etc/fstab`) so the image build and the watcher fit beside everything else.
 
+### Keeping the dev host on `main`
+
+Only the owner's `/ship` pulls `main` into the dev checkout, so every other merge (the
+developer's docs, tests, pipeline) leaves the dev host stale until the next ship, and a
+dependency bump leaves it stale in the one way the tree cannot show. A timer closes both
+gaps. [`scripts/dev_follow_main.sh`](scripts/dev_follow_main.sh) pulls `main` with the
+owner's unshipped edits stashed around it, then does the restart from the list above only
+if the change needs it: a build for `Dockerfile`, `requirements.txt` or the frontend
+lockfile, a recreate for the compose files, a Caddy reload for the Caddyfiles, and nothing
+at all for copy. Once, as root on the dev host:
+
+```sh
+cat >/etc/systemd/system/dev-follow-main.service <<'UNIT'
+[Unit]
+Description=Keep the development checkout on main
+After=docker.service
+[Service]
+Type=oneshot
+ExecStart=/srv/whitelabel/scripts/dev_follow_main.sh /srv/whitelabel
+UNIT
+cat >/etc/systemd/system/dev-follow-main.timer <<'UNIT'
+[Unit]
+Description=Pull main into the development checkout every five minutes
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+[Install]
+WantedBy=timers.target
+UNIT
+systemctl enable --now dev-follow-main.timer
+```
+
+`journalctl -u dev-follow-main` shows each run. The script exits non-zero and touches
+nothing when the pull is not a fast-forward, which only happens if something other than a
+merge commit landed on `main` ([ADR-0014](docs/adr/0014-merge-commits-and-a-required-check.md)),
+or when the stash of unshipped edits does not apply cleanly; both are the developer's to
+untangle by hand. Root runs a script from the tree here, but root already runs
+`docker compose up --build` from the same tree, so this widens nothing.
+
+A site with one host can do the same from the deploy job instead: production's deploy
+already runs as root on that box, pulls the dev checkout and rewrites its `APP_IMAGE` to
+the image it just proved healthy (ivangetsitdone/website, ADR-0018 and its deploy job).
+
 ## 2. Production
 
 ### 2a. Bootstrap

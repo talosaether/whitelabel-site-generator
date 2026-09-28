@@ -59,6 +59,8 @@ jobs:
         run: python3 tests/test_installation_names.py
       - name: The gate job is called check and the ship script arms a merge commit
         run: python3 tests/test_ship_pipeline.py
+      - name: The dev host follows main and rebuilds only when it must
+        run: python3 tests/test_dev_follow_main.py
 
       - uses: actions/setup-node@v7
         with:
