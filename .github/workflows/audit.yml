@@ -17,37 +17,51 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      # Audit on the interpreter that ships, read from the Dockerfile rather than repeated
+      # here, so a base image bump cannot leave the audit resolving on the wrong Python.
+      - id: python
+        run: |
+          version=$(grep -oE '^FROM python:[0-9]+\.[0-9]+' Dockerfile | head -1 | cut -d: -f2)
+          [ -n "$version" ] || { echo '::error::no FROM python:X.Y line in Dockerfile'; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.13'
+          python-version: ${{ steps.python.outputs.version }}
       - run: pipx run pip-audit -r requirements.txt --strict --progress-spinner off
 
-  # Caddy's digest lives in compose.yaml, which Dependabot's docker ecosystem does not read.
-  # Without this, pinning it would trade a floating tag for a permanently stale one — worse
-  # than where we started. A failure here means "bump the caddy pin", which is a one-line PR.
+  # Digests pinned in the compose files (Caddy in compose.yaml, the dev watchers in
+  # compose.dev.yaml) are outside Dependabot's docker ecosystem, which reads only the
+  # Dockerfile. Without this, pinning them would trade a floating tag for a permanently
+  # stale one, worse than where we started. A failure here means "bump a pin", and the
+  # log prints the one-line fix for each.
   images:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - name: The pinned Caddy digest is still the current one
+      - name: Every digest pinned in the compose files is still the current one
         run: |
-          ref=$(grep -oE 'caddy:[^@[:space:]]+@sha256:[a-f0-9]{64}' compose.yaml)
-          [ -n "$ref" ] || { echo '::error::no digest-pinned caddy image found in compose.yaml'; exit 1; }
-          tag=${ref%@*}
-          pinned=${ref#*@}
-
-          # A pin that no longer resolves breaks every build, so check it exists at all.
-          docker buildx imagetools inspect "$ref" >/dev/null ||
-            { echo "::error::pinned image $ref no longer resolves"; exit 1; }
-
-          current=$(docker buildx imagetools inspect "$tag" --format '{{.Manifest.Digest}}')
-          echo "pinned:  $pinned"
-          echo "current: $current"
-          if [ "$pinned" != "$current" ]; then
-            echo "::error::$tag has moved. Update the pin in compose.yaml to $current"
-            exit 1
-          fi
+          refs=$(grep -ohE 'image: [a-z0-9./_-]+:[^@[:space:]]+@sha256:[a-f0-9]{64}' compose*.yaml |
+            sed 's/^image: //' | sort -u)
+          [ -n "$refs" ] || { echo '::error::no digest-pinned images found in compose*.yaml'; exit 1; }
+          moved=0
+          for ref in $refs; do
+            tag=${ref%@*}
+            pinned=${ref#*@}
+            # A pin that no longer resolves breaks every build, so check it exists at all.
+            docker buildx imagetools inspect "$ref" >/dev/null ||
+              { echo "::error::pinned image $ref no longer resolves"; exit 1; }
+            current=$(docker buildx imagetools inspect "$tag" --format '{{.Manifest.Digest}}')
+            if [ "$pinned" = "$current" ]; then
+              echo "ok      $tag"
+            else
+              moved=1
+              files=$(grep -l "$ref" compose*.yaml Dockerfile 2>/dev/null | tr '\n' ' ')
+              echo "::error::$tag has moved: pinned $pinned, current $current, in $files"
+              echo "fix:    sed -i 's|$pinned|$current|' $files"
+            fi
+          done
+          [ "$moved" = 0 ] || { echo '::error::one or more pins have moved; the fix lines above are the whole PR'; exit 1; }
 
   npm:
     runs-on: ubuntu-latest

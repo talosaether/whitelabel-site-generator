@@ -42,7 +42,7 @@ services:
         max-file: "3"
   photos:
     # Same pin as the Dockerfile's photos stage, so the watcher builds what CI builds.
-    image: python:3.14-slim@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2
+    image: python:3.14-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d
     restart: unless-stopped
     working_dir: /build
     command: ["sh", "-c", "pip install --no-cache-dir -q Pillow==12.3.0 && exec python scripts/build_photos.py --watch"]
