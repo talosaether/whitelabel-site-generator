@@ -71,11 +71,18 @@ class ImagePinningTests(unittest.TestCase):
         self.assertIn("package-ecosystem: docker", config)
 
     def test_the_audit_watches_what_dependabot_cannot(self):
-        """Compose files are outside the docker ecosystem, so a pin there needs its own watch."""
+        """Compose files are outside the docker ecosystem, so a pin there needs its own watch,
+        and the watch must cover every compose file, not the one that happened to exist first."""
         audit = (ROOT / ".github/workflows/audit.yml").read_text()
         self.assertIn("images:", audit)
-        self.assertIn("compose.yaml", audit)
+        self.assertIn("compose*.yaml", audit)
         self.assertIn("imagetools inspect", audit)
+
+    def test_the_audit_runs_on_the_python_that_ships(self):
+        """A hardcoded python-version drifts the first time the base image bumps."""
+        audit = (ROOT / ".github/workflows/audit.yml").read_text()
+        self.assertNotRegex(audit, r"python-version: '\d")
+        self.assertIn("FROM python:", audit)
 
 
 class ImageProvenanceTests(unittest.TestCase):
