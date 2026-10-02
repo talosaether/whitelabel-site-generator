@@ -1,6 +1,6 @@
 # Digest-pinned so the runner and production run the same bytes. The tag stays for
 # readability; the digest is what resolves. Dependabot's docker ecosystem bumps these.
-FROM node:25-alpine@sha256:bdf2cca6fe3dabd014ea60163eca3f0f7015fbd5c7ee1b0e9ccb4ced6eb02ef4 AS assets
+FROM node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS assets
 WORKDIR /build/frontend
 COPY frontend/package*.json ./
 RUN npm ci
