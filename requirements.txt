@@ -4,5 +4,5 @@ fastapi==0.141.1
 # /print request goes through. Fixed in 0.49.1; 1.3.1 also closes the request.url
 # reconstruction issues that the cache middleware's path check relies on.
 starlette==1.6.0
-uvicorn==0.53.0
+uvicorn==0.54.0
 jinja2==3.1.6
