@@ -1,6 +1,6 @@
 # 9. Base images are pinned by digest, and something watches each pin
 
-Status: accepted
+Status: accepted; the dev overlay's own copies of the pins were removed by [ADR-0016](0016-one-pin-per-base-image.md)
 
 Builds on [ADR-0006](0006-dependency-hygiene.md).
 

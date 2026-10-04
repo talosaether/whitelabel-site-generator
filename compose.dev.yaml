@@ -23,8 +23,12 @@ services:
     volumes:
       - ./app:/srv/app:ro
   assets:
-    # Same pin as the Dockerfile's assets stage, so the watcher builds what CI builds.
-    image: node:25-alpine@sha256:bdf2cca6fe3dabd014ea60163eca3f0f7015fbd5c7ee1b0e9ccb4ced6eb02ef4
+    # The Dockerfile's own node base, built as a stage rather than pinned a second time
+    # here, so the watcher runs the toolchain CI builds with and a Dependabot bump of the
+    # Dockerfile is the whole change. After such a bump: `docker compose up -d --build`.
+    build:
+      context: .
+      target: node-base
     restart: unless-stopped
     working_dir: /build/frontend
     # npm ci against the committed lockfile on every start, then watch. The anonymous
@@ -41,8 +45,10 @@ services:
         max-size: "10m"
         max-file: "3"
   photos:
-    # Same pin as the Dockerfile's photos stage, so the watcher builds what CI builds.
-    image: python:3.14-slim@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2
+    # The Dockerfile's own python base, for the same reason as the node one above.
+    build:
+      context: .
+      target: python-base
     restart: unless-stopped
     working_dir: /build
     command: ["sh", "-c", "pip install --no-cache-dir -q Pillow==12.3.0 && exec python scripts/build_photos.py --watch"]

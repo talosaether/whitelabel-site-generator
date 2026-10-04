@@ -59,6 +59,14 @@ class DevOverlayTests(unittest.TestCase):
                          "node_modules stays out of the host checkout")
         self.assertEqual(int(self.assets["mem_limit"]), 512 * 1024 * 1024)
 
+    def test_the_watchers_are_built_from_the_dockerfile_base_stages(self):
+        """No pin of their own: a base image bump in the Dockerfile is the whole change."""
+        for service, target in (("assets", "node-base"), ("photos", "python-base")):
+            build = self.config["services"][service]["build"]
+            with self.subTest(service=service):
+                self.assertEqual(build["target"], target)
+                self.assertEqual(Path(build["context"]).resolve(), ROOT.resolve())
+
     def test_the_photo_watcher_reads_sources_and_writes_derivatives(self):
         photos = self.config["services"]["photos"]
         self.assertIn("--watch", " ".join(photos["command"]))

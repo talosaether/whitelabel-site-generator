@@ -21,6 +21,7 @@ project with the same architecture and carried over with the reasoning intact.
 | [0013](0013-owner-assistant-account.md) | The owner's assistant is an unprivileged account; the ACLs are the boundary |
 | [0014](0014-merge-commits-and-a-required-check.md) | Merge commits only, and a ruleset that makes auto-merge wait |
 | [0015](0015-a-person-merges-the-developers-pull-requests.md) | A person merges the developer's assistant's pull requests; the repository says so |
+| [0016](0016-one-pin-per-base-image.md) | Each base image is pinned once; the dev watchers build that stage |
 
 Format: context, decision, consequences. Keep them short; if one needs reversing, add a
 new record that supersedes it rather than rewriting history.

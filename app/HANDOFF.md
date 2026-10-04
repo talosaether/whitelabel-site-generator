@@ -34,8 +34,10 @@ commits just made; a merge commit keeps those commits as ancestors, so `git pull
 --autostash` brings the tree back in line without conflicts. A squash would rewrite them.
 Squash and rebase merging are off at the repository level for that reason, and a ruleset
 requiring `check` is what auto-merge waits for ([ADR-0014](../docs/adr/0014-merge-commits-and-a-required-check.md)).
-If `/ship` reports that the pull request is "waiting for someone to merge it", arming
-failed, and the ruleset is the first thing to check.
+`/ship` has three endings: armed; merged at once, because `check` had already passed for
+that exact commit (the developer pushed it for review first) and GitHub will not arm a
+pull request with nothing to wait for; or "waiting for someone to merge it", where arming
+failed and the ruleset is the first thing to check.
 
 The assistant's skills live in `.hermes/skills/` (`site`, `todo`, `recent`, `ship`). They
 are in the repo on purpose: the developer can read and change how the assistant works,

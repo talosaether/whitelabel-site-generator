@@ -32,7 +32,7 @@ updates:
     commit-message:
       prefix: deps(frontend)
 
-  # The three base images in the Dockerfile, pinned by digest. Dependabot opens a PR when
+  # The two base images in the Dockerfile, each pinned by digest exactly once (ADR-0016). Dependabot opens a PR when
   # a tag moves, so a base image change arrives as a reviewable diff through the check gate
   # rather than arriving silently the next time something rebuilds.
   #
