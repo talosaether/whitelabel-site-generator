@@ -1,6 +1,14 @@
 # Digest-pinned so the runner and production run the same bytes. The tag stays for
 # readability; the digest is what resolves. Dependabot's docker ecosystem bumps these.
-FROM node:25-alpine@sha256:bdf2cca6fe3dabd014ea60163eca3f0f7015fbd5c7ee1b0e9ccb4ced6eb02ef4 AS assets
+#
+# Each base image is named once, here, and nowhere else in the repository. The stages
+# below build FROM these names, and the development host's watchers in compose.dev.yaml
+# build these same two stages (`target: node-base`, `target: python-base`), so a bump is a
+# one-line diff that cannot leave a second copy of the pin behind (ADR-0016).
+FROM node:25-alpine@sha256:bdf2cca6fe3dabd014ea60163eca3f0f7015fbd5c7ee1b0e9ccb4ced6eb02ef4 AS node-base
+FROM python:3.14-slim@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2 AS python-base
+
+FROM node-base AS assets
 WORKDIR /build/frontend
 COPY frontend/package*.json ./
 RUN npm ci
@@ -8,14 +16,14 @@ COPY frontend/ ./
 RUN npm run build
 
 # Photos: originals in app/photos become metadata-free WebPs. Pillow lives only here.
-FROM python:3.14-slim@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2 AS photos
+FROM python-base AS photos
 WORKDIR /build
 RUN pip install --no-cache-dir Pillow==12.3.0
 COPY scripts/build_photos.py ./scripts/build_photos.py
 COPY app/photos/ ./app/photos/
 RUN python scripts/build_photos.py
 
-FROM python:3.14-slim@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2
+FROM python-base
 ENV PYTHONUNBUFFERED=1
 WORKDIR /srv
 COPY requirements.txt ./

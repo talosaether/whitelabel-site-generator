@@ -145,6 +145,7 @@ Short records of why the non-obvious choices were made, in [docs/adr](docs/adr):
 | [0012](docs/adr/0012-photos.md) | Photo originals are tracked beside the app; only generated derivatives are served |
 | [0013](docs/adr/0013-owner-assistant-account.md) | The owner's assistant runs as an unprivileged account; the ACLs are the boundary |
 | [0015](docs/adr/0015-a-person-merges-the-developers-pull-requests.md) | A person merges the developer's assistant's pull requests; `.claude/settings.json` says so |
+| [0016](docs/adr/0016-one-pin-per-base-image.md) | Each base image is pinned once; the dev watchers build that stage |
 
 ## Conventions
 

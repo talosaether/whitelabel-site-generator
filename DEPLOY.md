@@ -46,9 +46,12 @@ docker compose logs -f assets     # until "built in ..." appears; the first npm 
 After that, edit and refresh. `docker compose ps` should show `app`, `assets` and `caddy`
 all up. The watcher rebuilds in about 100ms; uvicorn restarts in about a second.
 
-Two things do still need a restart: a change to `requirements.txt` or `frontend/package.json`
-(`docker compose up -d --build`), and a change to `compose.yaml` or `compose.dev.yaml`
-(`docker compose up -d`). A `Caddyfile.dev` edit needs
+Two things do still need a restart: a change to `requirements.txt`, `frontend/package.json`
+or the `Dockerfile`, including a base image bump (`docker compose up -d --build`), and a
+change to `compose.yaml` or `compose.dev.yaml` (`docker compose up -d`). That applies after
+pulling a merged dependency update too: the watchers keep the toolchain and the
+`node_modules` they started with until they are recreated, and the dev site quietly serves
+a stale bundle in the meantime ([ADR-0016](docs/adr/0016-one-pin-per-base-image.md)). A `Caddyfile.dev` edit needs
 `docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`.
 
 The dev host is small (1 GB). Docker was installed there with a 2 GB swapfile

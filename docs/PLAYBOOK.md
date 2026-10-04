@@ -332,6 +332,8 @@ The owner's assistant does copy, the `SITE` block, services, colours and photos;
 | Regenerated brand assets overwrote a chosen one | the generator writes everything | developer | chosen assets are opt-in flags on the script (§7) |
 | Untracked files pile up in `app/inbox/` | consumed and never removed | developer | delete them when the issue closes; issue #10 |
 | Root's commits are signed as Hermes, or the reverse | a repository-local `user.name` in the shared tree | developer | per-account global identities; `git config --local --unset-all user.name` |
-| A Dependabot pull request is red | a major bump changed an API | developer | migrate on its branch, then merge; the gate did its job |
+| A Dependabot pull request is red | a major bump changed an API (base image bumps no longer fail on a second pin, ADR-0016) | developer | migrate on its branch, then merge; the gate did its job |
+| The dev site behaves differently from production after a dependency merge | the watchers kept their old toolchain and `node_modules` | developer | `docker compose up -d --build` on the development host after pulling |
+| The owner approved, `/ship` ran, and the pull request the developer had opened for the same commit is still open | the commit was already green, so there was nothing to arm | nobody | the ship script merges it directly now; the developer's pull request closes as merged |
 | Someone is about to run `docker compose down -v` | it deletes the certificate volume | anyone | do not; `.claude/settings.json` denies it |
 | `gh repo fork` or repository creation: HTTP 403 | the token covers one repository | the developer, from the laptop | prepare a branch and a bundle under `recovery/`, hand over the push; do not widen the token |

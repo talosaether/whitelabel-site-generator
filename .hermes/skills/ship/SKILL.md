@@ -27,4 +27,8 @@ take about two minutes and publishing about three more, `/recent` shows whether 
 through, and if it says FAILED nothing changed on the live site and the developer needs to
 look (`/todo add (dev) …`).
 
+If the script says the tests had already passed and it is merged, tell the owner it will be
+live in about three minutes. If it says the pull request is waiting for someone to merge it,
+say so plainly and add a `(dev)` task; do not try to merge it yourself.
+
 Never run the git commands by hand; the script is the whole procedure.

@@ -28,6 +28,11 @@ rule lived in a comment and a handoff note, which is not enough to stop a merge 
   actors. It is what auto-merge waits for. DEPLOY.md records how to create and verify it.
 - **Merge commits only.** Squash and rebase merging are disabled at the repository level,
   so no button and no `gh pr merge --squash` can rewrite the assistant's commits.
+- **The ship script merges directly when the commit is already green.** GitHub will not
+  arm auto-merge on a pull request with nothing left to wait for, which is what happens
+  when the developer pushed the same commit for review first. The script then merges at
+  once, only if a Deploy run has succeeded for that exact commit; the ruleset is still
+  the gate.
 - **The ship script reports when arming fails** instead of silencing it. The owner hears
   "waiting for someone to merge it" and tells the developer, whose first check is the
   ruleset.

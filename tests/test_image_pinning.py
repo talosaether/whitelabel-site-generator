@@ -15,14 +15,22 @@ DIGEST = re.compile(r"@sha256:[a-f0-9]{64}\b")
 
 class ImagePinningTests(unittest.TestCase):
     def test_every_dockerfile_base_is_pinned(self):
+        """A FROM that names an earlier stage inherits that stage's pin; every other one is a
+        registry reference and must carry a digest."""
         froms = [
-            line for line in (ROOT / "Dockerfile").read_text().splitlines()
+            line.split() for line in (ROOT / "Dockerfile").read_text().splitlines()
             if line.startswith("FROM ")
         ]
-        self.assertTrue(froms, "no FROM lines found")
-        for line in froms:
-            with self.subTest(line=line):
-                self.assertRegex(line, DIGEST)
+        stages, registry = set(), []
+        for parts in froms:
+            if parts[1] not in stages:
+                registry.append(parts[1])
+            if len(parts) == 4 and parts[2].upper() == "AS":
+                stages.add(parts[3])
+        self.assertTrue(registry, "no registry FROM lines found")
+        for image in registry:
+            with self.subTest(image=image):
+                self.assertRegex(image, DIGEST)
 
     def test_compose_images_are_pinned(self):
         """The app image is built locally and interpolated, not pulled."""
@@ -37,20 +45,36 @@ class ImagePinningTests(unittest.TestCase):
                         continue
                     self.assertRegex(value, DIGEST)
 
-    def test_the_dev_watchers_use_the_dockerfile_pins(self):
-        """The watchers on the dev host must build with the same toolchains CI builds with."""
+    def test_each_base_image_is_named_exactly_once(self):
+        """One pin per base image in the whole repository (ADR-0016). A second copy is what
+        Dependabot leaves behind: it bumps the Dockerfile and nothing else."""
         dockerfile = (ROOT / "Dockerfile").read_text()
-        overlay = (ROOT / "compose.dev.yaml").read_text()
         for base in ("node", "python"):
-            pin = re.search(rf"^FROM ({base}:\S+)", dockerfile, re.M).group(1)
             with self.subTest(base=base):
-                self.assertIn(f"image: {pin}", overlay)
+                pins = re.findall(rf"^FROM ({base}:\S+) AS (\S+)$", dockerfile, re.M)
+                self.assertEqual([stage for _, stage in pins], [f"{base}-base"],
+                                 f"{base} must be pulled once, as the stage {base}-base")
+        for name in ("compose.yaml", "compose.dev.yaml"):
+            text = (ROOT / name).read_text()
+            with self.subTest(file=name):
+                self.assertNotRegex(text, r"image:\s*(node|python):", f"{name} pins a base image of its own")
 
-    def test_the_two_python_stages_agree(self):
-        """Different digests would build the photos on one Python and run on another."""
-        pins = re.findall(r"^FROM (python:[^\s]+)", (ROOT / "Dockerfile").read_text(), re.M)
-        self.assertEqual(len(pins), 2, pins)
-        self.assertEqual(len(set(pins)), 1, f"python stages disagree: {pins}")
+    def test_the_build_stages_use_the_named_bases(self):
+        """Photos are built on the Python the app runs on, and assets on the watcher's Node."""
+        dockerfile = (ROOT / "Dockerfile").read_text()
+        self.assertRegex(dockerfile, r"(?m)^FROM node-base AS assets$")
+        self.assertRegex(dockerfile, r"(?m)^FROM python-base AS photos$")
+        self.assertRegex(dockerfile, r"(?m)^FROM python-base$", "the runtime stage")
+
+    def test_the_dev_watchers_build_the_dockerfile_bases(self):
+        """The watchers on the dev host run the toolchains CI builds with, by building the
+        same stages rather than by repeating their pins."""
+        overlay = (ROOT / "compose.dev.yaml").read_text()
+        for service, target in (("assets", "node-base"), ("photos", "python-base")):
+            block = overlay[overlay.index(f"  {service}:\n"):]
+            block = block[:block.index("\n  ", block.index("command:")) if "command:" in block else len(block)]
+            with self.subTest(service=service):
+                self.assertRegex(block, rf"build:\n\s+context: \.\n\s+target: {target}\n")
 
     def test_pillow_is_pinned_the_same_everywhere(self):
         dockerfile = (ROOT / "Dockerfile").read_text()
